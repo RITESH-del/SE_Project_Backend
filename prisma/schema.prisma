@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("student") // "admin" | "faculty" | "student"
+  faculty   Faculty?
+  student   Student?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StudentGroup {
+  id        String          @id @default(uuid())
+  name      String          @unique // e.g. "CS-2026-A"
+  students  Student[]
+  courses   Course[]
+  slots     TimetableSlot[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model Faculty {
+  id              String          @id @default(uuid())
+  name            String
+  email           String          @unique
+  department      String
+  workloadHours   Int             @default(0)
+  maxHoursPerWeek Int             @default(20)
+  userId          String?         @unique
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  courses         Course[]
+  slots           TimetableSlot[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Student {
+  id             String       @id @default(uuid())
+  name           String
+  email          String       @unique
+  rollNumber     String       @unique
+  studentGroupId String
+  studentGroup   StudentGroup @relation(fields: [studentGroupId], references: [id], onDelete: Cascade)
+  userId         String?      @unique
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Room {
+  id        String          @id @default(uuid())
+  name      String          @unique // e.g. "Room 302", "Lab 2"
+  capacity  Int
+  type      String          @default("lecture") // "lecture" | "lab"
+  building  String?
+  slots     TimetableSlot[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model Course {
+  id             String          @id @default(uuid())
+  code           String          @unique // e.g. "CS301"
+  name           String
+  credits        Int
+  studentGroupId String
+  studentGroup   StudentGroup    @relation(fields: [studentGroupId], references: [id], onDelete: Cascade)
+  facultyId      String?
+  faculty        Faculty?        @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+  slots          TimetableSlot[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model TimetableSlot {
+  id             String       @id @default(uuid())
+  dayOfWeek      Int          // 1 = Monday ... 7 = Sunday
+  startTime      String       // "09:00"
+  endTime        String       // "10:30"
+  status         String       @default("scheduled") // "scheduled" | "verified" | "conflict"
+  roomId         String
+  room           Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  facultyId      String
+  faculty        Faculty      @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  studentGroupId String
+  studentGroup   StudentGroup @relation(fields: [studentGroupId], references: [id], onDelete: Cascade)
+  courseId       String
+  course         Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
